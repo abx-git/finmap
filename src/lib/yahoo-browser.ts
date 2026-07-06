@@ -2,6 +2,7 @@ import type { Period } from "./types";
 import { PERIODS, MAX_HISTORY_DAYS } from "./types";
 import type { DividendEvent } from "./dividends-calc";
 import { getMemoryCached, setMemoryCache, sanitizeCacheKey } from "./memory-cache";
+import { fetchJson } from "./http";
 
 export interface PriceData {
   currentPrice: number;
@@ -34,11 +35,7 @@ function subtractDays(date: Date, days: number): Date {
 }
 
 async function yahooGet(url: string): Promise<unknown> {
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Yahoo API Fehler: ${res.status}`);
-  }
-  return res.json();
+  return fetchJson(url);
 }
 
 function findClosestPrice(

@@ -37,6 +37,7 @@ jobs:
         run: npm run build:pages
         env:
           GITHUB_PAGES: "true"
+          NEXT_PUBLIC_USE_CORS_PROXY: "true"
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

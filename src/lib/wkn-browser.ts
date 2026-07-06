@@ -3,6 +3,7 @@ import {
   verifyYahooTicker,
 } from "./yahoo-browser";
 import { getMemoryCached, setMemoryCache, sanitizeCacheKey } from "./memory-cache";
+import { fetchJson } from "./http";
 
 export interface ResolvedInstrument {
   wkn: string;
@@ -68,32 +69,35 @@ async function resolveViaOpenFIGI(wkn: string): Promise<OpenFigiEntry | null> {
   const cached = getMemoryCached<OpenFigiEntry>(cacheKey);
   if (cached) return cached;
 
-  const res = await fetch("https://api.openfigi.com/v3/mapping", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify([{ idType: "ID_WERTPAPIER", idValue: wkn }]),
-  });
-  if (!res.ok) return null;
+  try {
+    const res = await fetchJson("https://api.openfigi.com/v3/mapping", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([{ idType: "ID_WERTPAPIER", idValue: wkn }]),
+    });
 
-  const results = (await res.json()) as Array<{ data?: OpenFigiEntry[] }>;
-  const data = results[0]?.data;
-  if (!data?.length) return null;
+    const results = res as Array<{ data?: OpenFigiEntry[] }>;
+    const data = results[0]?.data;
+    if (!data?.length) return null;
 
-  const equities = data.filter(
-    (d) =>
-      d.marketSector === "Equity" &&
-      (d.securityType === "Common Stock" || d.securityType === "ETP")
-  );
-  const german = equities.filter((d) => GERMAN_EXCH_CODES.has(d.exchCode));
-  const pick =
-    german.find((d) => d.exchCode === "GY") ??
-    german.find((d) => d.exchCode === "GF") ??
-    german[0] ??
-    equities[0];
+    const equities = data.filter(
+      (d) =>
+        d.marketSector === "Equity" &&
+        (d.securityType === "Common Stock" || d.securityType === "ETP")
+    );
+    const german = equities.filter((d) => GERMAN_EXCH_CODES.has(d.exchCode));
+    const pick =
+      german.find((d) => d.exchCode === "GY") ??
+      german.find((d) => d.exchCode === "GF") ??
+      german[0] ??
+      equities[0];
 
-  if (!pick) return null;
-  setMemoryCache(cacheKey, pick);
-  return pick;
+    if (!pick) return null;
+    setMemoryCache(cacheKey, pick);
+    return pick;
+  } catch {
+    return null;
+  }
 }
 
 async function searchYahooFund(name: string): Promise<string | null> {

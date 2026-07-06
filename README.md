@@ -37,7 +37,7 @@ Der Deploy schlägt mit `404 Not Found` fehl, wenn Pages noch nicht aktiviert is
 2. Unter **Build and deployment → Source** wählen Sie **GitHub Actions** (nicht „Deploy from a branch“)
 3. Speichern – danach unter **Actions** den Workflow **Deploy GitHub Pages** erneut ausführen („Re-run all jobs“ oder `workflow_dispatch`)
 
-Bei jedem Push auf `main` wird die Seite danach automatisch gebaut und veröffentlicht. Die Analyse läuft vollständig im Browser (Yahoo Finance + OpenFIGI).
+Bei jedem Push auf `main` wird die Seite danach automatisch gebaut und veröffentlicht. Die Analyse läuft im Browser; auf GitHub Pages werden Anfragen an Yahoo Finance und OpenFIGI über CORS-Proxies geleitet (lokal direkt).
 
 Lokaler Pages-Build:
 
