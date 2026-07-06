@@ -1,7 +1,27 @@
-function shouldUseCorsProxy(): boolean {
-  if (typeof window === "undefined") return false;
-  if (process.env.NEXT_PUBLIC_USE_CORS_PROXY === "true") return true;
-  return window.location.hostname.endsWith("github.io");
+const ALLOWED_PROXY_HOSTS = new Set([
+  "api.openfigi.com",
+  "query1.finance.yahoo.com",
+  "query2.finance.yahoo.com",
+]);
+
+const DEFAULT_PROXY_BASE =
+  process.env.NEXT_PUBLIC_CORS_PROXY_URL ??
+  "https://cors.raghu.workers.dev/?url=";
+
+function needsProxy(): boolean {
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host === "github.io" || host.endsWith(".github.io")) return true;
+  }
+  return process.env.NEXT_PUBLIC_USE_CORS_PROXY === "true";
+}
+
+function buildProxyUrl(targetUrl: string): string {
+  const base = DEFAULT_PROXY_BASE;
+  if (base.includes("url=")) {
+    return `${base}${encodeURIComponent(targetUrl)}`;
+  }
+  return `${base}${targetUrl}`;
 }
 
 async function directFetch(url: string, init?: RequestInit): Promise<unknown> {
@@ -18,62 +38,47 @@ async function directFetch(url: string, init?: RequestInit): Promise<unknown> {
   return res.json();
 }
 
-async function fetchViaAllOrigins(url: string): Promise<unknown> {
-  const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-  const res = await fetch(proxyUrl);
-  if (!res.ok) throw new Error(`AllOrigins ${res.status}`);
-  const wrapper = (await res.json()) as { contents?: string };
-  if (!wrapper.contents) throw new Error("AllOrigins: leere Antwort");
-  return JSON.parse(wrapper.contents);
-}
+async function fetchViaProxy(url: string, init?: RequestInit): Promise<unknown> {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    throw new Error("Ungültige URL");
+  }
 
-async function fetchViaCorsProxy(url: string, init?: RequestInit): Promise<unknown> {
-  const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(url)}`;
+  if (!ALLOWED_PROXY_HOSTS.has(parsed.hostname)) {
+    throw new Error(`Proxy nicht erlaubt für ${parsed.hostname}`);
+  }
+
+  const proxyUrl = buildProxyUrl(url);
   const res = await fetch(proxyUrl, {
     method: init?.method ?? "GET",
     headers: init?.headers,
     body: init?.body,
   });
-  if (!res.ok) throw new Error(`CorsProxy ${res.status}`);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Proxy ${res.status}${text ? `: ${text.slice(0, 80)}` : ""}`
+    );
+  }
+
   return res.json();
 }
 
 export async function fetchJson(url: string, init?: RequestInit): Promise<unknown> {
-  const method = (init?.method ?? "GET").toUpperCase();
-
-  if (!shouldUseCorsProxy()) {
-    try {
-      return await directFetch(url, init);
-    } catch {
-      // fall through to proxy
-    }
-  }
-
-  const errors: string[] = [];
-
-  if (method === "GET") {
-    try {
-      return await fetchViaAllOrigins(url);
-    } catch (err) {
-      errors.push(err instanceof Error ? err.message : "AllOrigins fehlgeschlagen");
-    }
+  if (!needsProxy()) {
+    return directFetch(url, init);
   }
 
   try {
-    return await fetchViaCorsProxy(url, init);
-  } catch (err) {
-    errors.push(err instanceof Error ? err.message : "CorsProxy fehlgeschlagen");
+    return await fetchViaProxy(url, init);
+  } catch (proxyError) {
+    const message =
+      proxyError instanceof Error ? proxyError.message : "Proxy fehlgeschlagen";
+    throw new Error(
+      `Datenabruf fehlgeschlagen (${message}). Bitte Seite hart neu laden (Strg+Shift+R) und erneut versuchen.`
+    );
   }
-
-  if (method === "GET") {
-    try {
-      return await directFetch(url, init);
-    } catch {
-      // already tried
-    }
-  }
-
-  throw new Error(
-    `Datenabruf fehlgeschlagen (${errors.join(", ") || "CORS"}). Bitte später erneut versuchen.`
-  );
 }
