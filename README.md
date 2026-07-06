@@ -25,6 +25,22 @@ npm run dev
 
 Öffnen Sie [http://localhost:3000](http://localhost:3000) und klicken Sie auf **Analysieren**.
 
+## GitHub Pages
+
+Live-Demo: **[https://abx-git.github.io/finmap/](https://abx-git.github.io/finmap/)**
+
+Bei jedem Push auf `main` wird die Seite automatisch via GitHub Actions gebaut und veröffentlicht. Die Analyse läuft vollständig im Browser (Yahoo Finance + OpenFIGI).
+
+Repository-Einstellung: **Settings → Pages → Source: GitHub Actions**
+
+Lokaler Pages-Build:
+
+```bash
+npm run build:pages
+```
+
+Statische Dateien liegen danach in `out/`.
+
 ## Portfolio-Format
 
 CSV (Semikolon oder Komma):
@@ -74,18 +90,17 @@ Eine Beispiel-Datei liegt unter [`public/example-portfolio.csv`](public/example-
 ```
 src/
 ├── app/
-│   ├── page.tsx                    # Hauptseite
-│   └── api/portfolio/analyze/      # Portfolio-Analyse-API
+│   └── page.tsx                    # Hauptseite
 ├── components/                     # UI (Map, Tabelle, Import, …)
 └── lib/
-    ├── wkn.ts                      # WKN → Ticker
-    ├── prices.ts                   # Kurse & Performance
-    ├── dividends.ts                # Ausschüttungen
-    ├── etf-holdings.ts             # ETF-Bestandteile
-    └── portfolio.ts                # Analyse-Logik
+    ├── analyze-client.ts           # Portfolio-Analyse (Browser)
+    ├── yahoo-browser.ts            # Yahoo Finance API (Browser)
+    ├── wkn-browser.ts              # WKN → Ticker (OpenFIGI)
+    ├── dividends-calc.ts           # Dividenden-Berechnung
+    └── portfolio-summary.ts        # Zusammenfassung
 ```
 
-Kurs- und Dividendendaten werden serverseitig gecacht (`.cache/`, TTL 15 Minuten).
+Server-seitige Module (`wkn.ts`, `prices.ts`, …) bleiben für lokale Node-Deployments erhalten. GitHub Pages nutzt die Browser-Variante.
 
 ## Hinweise
 

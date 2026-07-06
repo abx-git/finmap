@@ -7,6 +7,7 @@ import PeriodSelector from "@/components/PeriodSelector";
 import HoldingsTable from "@/components/HoldingsTable";
 import PortfolioSummaryCard from "@/components/PortfolioSummary";
 import EtfBreakdownMap from "@/components/EtfBreakdownMap";
+import { analyzePortfolioClient } from "@/lib/analyze-client";
 import type { AnalyzeResponse, HoldingInput, Period } from "@/lib/types";
 
 const DEFAULT_HOLDINGS: HoldingInput[] = [
@@ -26,15 +27,7 @@ export default function HomePage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/portfolio/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ holdings }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error ?? "Analyse fehlgeschlagen");
-      }
+      const data = await analyzePortfolioClient(holdings);
       setResult(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unbekannter Fehler");
