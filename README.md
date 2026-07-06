@@ -29,9 +29,15 @@ npm run dev
 
 Live-Demo: **[https://abx-git.github.io/finmap/](https://abx-git.github.io/finmap/)**
 
-Bei jedem Push auf `main` wird die Seite automatisch via GitHub Actions gebaut und veröffentlicht. Die Analyse läuft vollständig im Browser (Yahoo Finance + OpenFIGI).
+### Einmalige Aktivierung (wichtig)
 
-Repository-Einstellung: **Settings → Pages → Source: GitHub Actions**
+Der Deploy schlägt mit `404 Not Found` fehl, wenn Pages noch nicht aktiviert ist:
+
+1. Öffnen Sie **[github.com/abx-git/finmap/settings/pages](https://github.com/abx-git/finmap/settings/pages)**
+2. Unter **Build and deployment → Source** wählen Sie **GitHub Actions** (nicht „Deploy from a branch“)
+3. Speichern – danach unter **Actions** den Workflow **Deploy GitHub Pages** erneut ausführen („Re-run all jobs“ oder `workflow_dispatch`)
+
+Bei jedem Push auf `main` wird die Seite danach automatisch gebaut und veröffentlicht. Die Analyse läuft vollständig im Browser (Yahoo Finance + OpenFIGI).
 
 Lokaler Pages-Build:
 
