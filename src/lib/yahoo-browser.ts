@@ -16,6 +16,7 @@ interface ChartResult {
     regularMarketPrice?: number;
     previousClose?: number;
     chartPreviousClose?: number;
+    regularMarketPreviousClose?: number;
     longName?: string;
     shortName?: string;
     instrumentType?: string;
@@ -26,6 +27,45 @@ interface ChartResult {
   events?: {
     dividends?: Record<string, { amount: number; date: number }>;
   };
+}
+
+function previousSessionClose(
+  history: { date: Date; close: number }[],
+  currentPrice: number
+): number | null {
+  if (history.length === 0) return null;
+
+  const sorted = [...history].sort((a, b) => b.date.getTime() - a.date.getTime());
+  if (sorted.length === 1) return sorted[0].close;
+
+  const [latest, prior] = sorted;
+  const latestMatchesCurrent =
+    currentPrice > 0 &&
+    Math.abs(latest.close - currentPrice) / currentPrice < 0.02;
+
+  if (latestMatchesCurrent) return prior.close;
+  return latest.close;
+}
+
+function resolvePreviousClose(
+  meta: NonNullable<ChartResult["meta"]>,
+  history: { date: Date; close: number }[]
+): number {
+  const currentPrice = meta.regularMarketPrice ?? 0;
+
+  if (meta.regularMarketPreviousClose != null) {
+    return meta.regularMarketPreviousClose;
+  }
+  if (meta.previousClose != null) {
+    return meta.previousClose;
+  }
+
+  const fromHistory = previousSessionClose(history, currentPrice);
+  if (fromHistory != null) {
+    return fromHistory;
+  }
+
+  return currentPrice;
 }
 
 function subtractDays(date: Date, days: number): Date {
@@ -75,7 +115,7 @@ function parseChartResult(result: ChartResult) {
 
   return {
     currentPrice: meta.regularMarketPrice ?? 0,
-    previousClose: meta.previousClose ?? meta.chartPreviousClose ?? meta.regularMarketPrice ?? 0,
+    previousClose: resolvePreviousClose(meta, history),
     quoteType: meta.instrumentType ?? meta.quoteType ?? null,
     name: meta.longName ?? meta.shortName ?? null,
     history,
